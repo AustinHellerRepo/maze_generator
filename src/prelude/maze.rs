@@ -77,7 +77,7 @@ impl std::fmt::Debug for Maze {
         for iy in 0..self.size.1 {
             // print top passage
             for ix in 0..self.size.0 {
-                f.write_str("·")?;
+                f.write_str("█")?;
                 if self
                     .get_field(&(ix, iy).into())
                     .ok_or(std::fmt::Error {})?
@@ -85,10 +85,10 @@ impl std::fmt::Debug for Maze {
                 {
                     f.write_str(" ")?;
                 } else {
-                    f.write_str("-")?;
+                    f.write_str("█")?;
                 }
             }
-            f.write_str("·\n")?;
+            f.write_str("█\n")?;
 
             // print left passage and room icon
             for ix in 0..self.size.0 {
@@ -96,7 +96,7 @@ impl std::fmt::Debug for Maze {
                 if field.has_passage(&Direction::West) {
                     f.write_str(" ")?;
                 } else {
-                    f.write_str("|")?;
+                    f.write_str("█")?;
                 }
 
                 f.write_str(match field.field_type {
@@ -105,14 +105,14 @@ impl std::fmt::Debug for Maze {
                     _ => " ",
                 })?;
             }
-            f.write_str("|\n")?;
+            f.write_str("█\n")?;
 
             // print bottom line
             if iy == self.size.1 - 1 {
                 for _ix in 0..self.size.0 {
-                    f.write_str("·-")?;
+                    f.write_str("██")?;
                 }
-                f.write_str("·\n")?;
+                f.write_str("█\n")?;
             }
         }
 

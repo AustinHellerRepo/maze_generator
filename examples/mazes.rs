@@ -10,6 +10,7 @@ use maze_generator::growing_tree::*;
 use maze_generator::prelude::*;
 use maze_generator::prims_algorithm::PrimsGenerator;
 use maze_generator::recursive_backtracking::RbGenerator;
+use rand::Rng;
 
 fn main() -> Result<()> {
     // Define the CLI arguments
@@ -118,6 +119,16 @@ fn main() -> Result<()> {
             generator.selection_method = match selection_method {
                 1 => GrowingTreeSelectionMethod::MostRecent,
                 2 => GrowingTreeSelectionMethod::Random,
+                3 => {
+                    let mut rng = rand::thread_rng();
+                    let mut coordinates_list = (1..rng.gen_range(2, 100))
+                        .into_iter()
+                        .map(|_| Coordinates::new(rng.gen_range(0, width), rng.gen_range(0, height)))
+                        .collect::<Vec<Coordinates>>();
+                    coordinates_list.dedup();
+                    println!("Coordinates count: {}", coordinates_list.len());
+                    GrowingTreeSelectionMethod::Voronio(coordinates_list)
+                },
                 _ => GrowingTreeSelectionMethod::First,
             };
             generator.generate(width, height)?

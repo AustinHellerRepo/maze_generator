@@ -34,6 +34,17 @@ impl Coordinates {
                 },
         }
     }
+
+    pub fn octogonal_distance(&self, other: &Coordinates) -> f32 {
+        // this method approximates distance without needing to invoke squares and squareroots
+        let dx = self.x.abs_diff(other.x);
+        let dy = self.y.abs_diff(other.y);
+        return 0.5 * (dx + dy + dx.max(dy)) as f32;
+    }
+
+    pub fn manhattan_distance(&self, other: &Coordinates) -> u32 {
+        return self.x.abs_diff(other.x) + self.y.abs_diff(other.y);
+    }
 }
 
 impl From<Coordinates> for (i32, i32) {

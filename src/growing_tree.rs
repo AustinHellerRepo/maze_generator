@@ -22,7 +22,7 @@ use rand_chacha::ChaChaRng;
 use crate::prelude::*;
 
 /// Different ways in which the next root cell is selected from the stack of possibilities
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum GrowingTreeSelectionMethod {
     /// A random cell. Equivalent to Prim's algorithm.
     Random,
@@ -30,6 +30,8 @@ pub enum GrowingTreeSelectionMethod {
     MostRecent,
     /// The first cell on the stack.
     First,
+    /// Cells closest to the specific locations are chosen first
+    Voronio(Vec<Coordinates>),
 }
 
 /// [`Generator`] implementation which uses the recursive-backtracking algorithm.
@@ -105,7 +107,7 @@ impl GrowingTreeGenerator {
 
                 // And now select a new current cell according to 'selectionmethod' parameter
                 // pop and remove wont fail because we just tested for non-zero length
-                current_coordinates = match self.selection_method {
+                current_coordinates = match &self.selection_method {
                     GrowingTreeSelectionMethod::MostRecent => self
                         .cell_stack
                         .pop()
@@ -119,12 +121,50 @@ impl GrowingTreeGenerator {
                         self.cell_stack[self.rng.gen_range(0, self.cell_stack.len())]
                     }
                     GrowingTreeSelectionMethod::First => self.cell_stack.remove(0),
+                    GrowingTreeSelectionMethod::Voronio(coordinates_list) => {
+                        let chosen_cell = self.cell_stack
+                            .iter()
+                            .map(|c| {
+                                coordinates_list
+                                    .iter()
+                                    .map(|c2| {
+                                        c2.manhattan_distance(c)
+                                    })
+                                    .min()
+                                    .unwrap_or(0)
+                            })
+                            .enumerate()
+                            .min_by(|(_, a), (_, b)| a.cmp(b))
+                            .map(|(index, _)| index)
+                            .unwrap();
+                        self.cell_stack.remove(chosen_cell)
+                    }
                 };
             } else {
                 // We have some neighbours so we can make a passage
 
                 // Choose a random neighbouring cell and move to it.
-                let next_coords = self.neighbours[self.rng.gen_range(0, self.neighbours.len())];
+                let next_coords = match &self.selection_method {
+                    GrowingTreeSelectionMethod::Voronio(coordinates_list) => {
+                        let chosen_cell = self.neighbours
+                            .iter()
+                            .map(|c| {
+                                coordinates_list
+                                    .iter()
+                                    .map(|c2| {
+                                        c2.manhattan_distance(c)
+                                    })
+                                    .min()
+                                    .unwrap_or(0)
+                            })
+                            .enumerate()
+                            .min_by(|(_, a), (_, b)| a.cmp(b))
+                            .map(|(index, _)| index)
+                            .unwrap();
+                        self.neighbours[chosen_cell]
+                    },
+                    _ => self.neighbours[self.rng.gen_range(0, self.neighbours.len())]
+                };
                 maze.graph.add_edge(current_coordinates, next_coords, ()); // Knock down the wall between them
                 self.cell_stack.push(next_coords);
                 current_coordinates = next_coords;
