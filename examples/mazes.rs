@@ -26,6 +26,14 @@ fn main() -> Result<()> {
                 .help("A maze generator name (ellers|prims|growingtree). Uses recursive backtracing if not specified."),
         )
         .arg(
+            Arg::new("neighbor")
+                .short('n')
+                .long("neighbor")
+                .takes_value(true)
+                .default_value("all")
+                .help("The neighbor selection method for growing tree."),
+        )
+        .arg(
             Arg::new("width")
                 .short('w')
                 .long("width")
@@ -115,8 +123,7 @@ fn main() -> Result<()> {
         }
         "gt" | "growing" | "growingtree" => {
             actualtype = String::from("Growing tree");
-            let mut generator = GrowingTreeGenerator::new(rngseed);
-            generator.selection_method = match selection_method {
+            let selection_method = match selection_method {
                 1 => GrowingTreeSelectionMethod::MostRecent,
                 2 => GrowingTreeSelectionMethod::Random,
                 3 => {
@@ -131,6 +138,32 @@ fn main() -> Result<()> {
                 },
                 _ => GrowingTreeSelectionMethod::First,
             };
+            let neighbor_type = matches.value_of("neighbor").unwrap().to_lowercase();
+            let neighbor_collection_method = match neighbor_type.as_str() {
+                "all" => GrowingTreeNeighborCollectionMethod::AllDirection,
+                "bub" => {
+                    let mut rng = rand::thread_rng();
+                    let mut coordinates_list = (1..rng.gen_range(2, 1000))
+                        .into_iter()
+                        .map(|_| Coordinates::new(rng.gen_range(0, width), rng.gen_range(0, height)))
+                        .collect::<Vec<Coordinates>>();
+                    coordinates_list.dedup();
+                    println!("Coordinates count: {}", coordinates_list.len());
+                    GrowingTreeNeighborCollectionMethod::Bubbles(coordinates_list)
+                },
+                "ex" => {
+                    let mut rng = rand::thread_rng();
+                    let mut coordinates_list = (1..rng.gen_range(2, 1000))
+                        .into_iter()
+                        .map(|_| Coordinates::new(rng.gen_range(0, width), rng.gen_range(0, height)))
+                        .collect::<Vec<Coordinates>>();
+                    coordinates_list.dedup();
+                    println!("Coordinates count: {}", coordinates_list.len());
+                    GrowingTreeNeighborCollectionMethod::Gaps(coordinates_list)
+                },
+                _ => GrowingTreeNeighborCollectionMethod::AllDirection,
+            };
+            let mut generator = GrowingTreeGenerator::new(rngseed, selection_method, neighbor_collection_method);
             generator.generate(width, height)?
         }
         "prim" | "prims" => {
