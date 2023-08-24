@@ -34,12 +34,24 @@ pub enum GrowingTreeSelectionMethod {
     Voronio(Vec<Coordinates>),
 }
 
+/// Determines how the neighbors will be gathered up per wave of growth
+#[derive(Debug, Clone)]
+pub enum GrowingTreeNeighborCollectionMethod {
+    /// Gathers all neighbors from all available/unvisited directions
+    AllDirection,
+    /// Creates bubble of unvisitable locations
+    Bubbles(Vec<Coordinates>),
+    /// Excludes specific locations
+    Gaps(Vec<Coordinates>),
+}
+
 /// [`Generator`] implementation which uses the recursive-backtracking algorithm.
 #[derive(Debug, Clone)]
 pub struct GrowingTreeGenerator {
     rng: ChaChaRng,
     /// The method by which to select the next candidate cell from the available possibilities
-    pub selection_method: GrowingTreeSelectionMethod,
+    selection_method: GrowingTreeSelectionMethod,
+    neighbor_collection_method: GrowingTreeNeighborCollectionMethod,
     cell_stack: Vec<Coordinates>,
     visited: Vec<Coordinates>,
     neighbours: Vec<Coordinates>,
@@ -51,15 +63,25 @@ impl GrowingTreeGenerator {
     /// Optionally a 32 bit seed can be provided to seed the internal random generator.
     /// Giving a seed results in identical mazes being generated which omitting it sources the
     /// random generator from entropy.
-    pub fn new(seed: Option<[u8; 32]>) -> GrowingTreeGenerator {
+    pub fn new(
+        seed: Option<[u8; 32]>,
+        selection_method: GrowingTreeSelectionMethod,
+        neighbor_collection_method: GrowingTreeNeighborCollectionMethod
+    ) -> GrowingTreeGenerator {
+        let visited = match &neighbor_collection_method {
+            GrowingTreeNeighborCollectionMethod::AllDirection => Vec::new(),
+            GrowingTreeNeighborCollectionMethod::Bubbles(bubbles) => bubbles.clone(),
+            GrowingTreeNeighborCollectionMethod::Gaps(_) => Vec::new(),
+        };
         GrowingTreeGenerator {
             rng: match seed {
                 None => ChaChaRng::from_entropy(),
                 Some(seed) => ChaChaRng::from_seed(seed),
             },
-            selection_method: GrowingTreeSelectionMethod::First,
+            selection_method,
+            neighbor_collection_method,
             cell_stack: Vec::new(),
-            visited: Vec::new(),
+            visited,
             neighbours: Vec::new(),
         }
     }
@@ -185,12 +207,38 @@ impl GrowingTreeGenerator {
     fn find_unvisited_neighbours(&mut self, maze: &mut Maze, current_coordinates: Coordinates) {
         self.neighbours.clear(); // Clear the current neighbour list
 
-        // Look all around, add any UNvisited neighbours to the list
-        for i_dir in Direction::all().iter() {
-            let next_coords = current_coordinates.next(i_dir);
-            if maze.are_coordinates_inside(&next_coords) && !self.visited.contains(&next_coords) {
-                self.neighbours.push(next_coords);
-            }
+        match &mut self.neighbor_collection_method {
+            GrowingTreeNeighborCollectionMethod::AllDirection => {
+                // Look all around, add any UNvisited neighbours to the list
+                for i_dir in Direction::all().iter() {
+                    let next_coords = current_coordinates.next(i_dir);
+                    if maze.are_coordinates_inside(&next_coords) && !self.visited.contains(&next_coords) {
+                        self.neighbours.push(next_coords);
+                    }
+                }
+            },
+            GrowingTreeNeighborCollectionMethod::Bubbles(_) => {
+                // Look all around, add any UNvisited neighbours to the list
+                for i_dir in Direction::all().iter() {
+                    let next_coords = current_coordinates.next(i_dir);
+                    if maze.are_coordinates_inside(&next_coords) && !self.visited.contains(&next_coords) {
+                        self.neighbours.push(next_coords);
+                    }
+                }
+            },
+            GrowingTreeNeighborCollectionMethod::Gaps(gaps) => {
+                // Look all around, add any UNvisited neighbours to the list
+                for i_dir in Direction::all().iter() {
+                    let next_coords = current_coordinates.next(i_dir);
+                    if maze.are_coordinates_inside(&next_coords) && (!self.visited.contains(&next_coords) || gaps.contains(&next_coords)) {
+                        if self.visited.contains(&next_coords) {
+                            let index = gaps.iter().position(|x| *x == next_coords).unwrap();
+                            gaps.remove(index);
+                        }
+                        self.neighbours.push(next_coords);
+                    }
+                }
+            },
         }
     }
 }
