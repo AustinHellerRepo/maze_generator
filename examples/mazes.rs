@@ -121,7 +121,7 @@ fn main() -> Result<()> {
                 2 => GrowingTreeSelectionMethod::Random,
                 3 => {
                     let mut rng = rand::thread_rng();
-                    let mut coordinates_list = (1..rng.gen_range(2, 100))
+                    let mut coordinates_list = (1..rng.gen_range(2, 200))
                         .into_iter()
                         .map(|_| Coordinates::new(rng.gen_range(0, width), rng.gen_range(0, height)))
                         .collect::<Vec<Coordinates>>();
